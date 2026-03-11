@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juego de Carros</title>
+<style>
+body{margin:0;font-family:Arial;background:#111;color:white;text-align:center;}
+.screen{position:absolute;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#111;}
+button{padding:10px 20px;font-size:18px;margin:10px;cursor:pointer;}
+#game{width:360px;height:600px;background:#333;margin:auto;position:relative;overflow:hidden;border:4px solid white;display:none;}
+#info{display:flex;justify-content:space-between;padding:5px 10px;font-size:18px;}
+#score,#coins,#speedDisplay{margin:0 5px;}
+.laneLine{width:6px;height:80px;background:white;position:absolute;}
+#line1{left:120px} #line2{left:240px}
+#player{width:60px;height:100px;position:absolute;bottom:20px;background-size:cover;}
+.enemy{width:60px;height:100px;position:absolute;top:-120px;background-size:cover;}
+.coin{width:30px;height:30px;position:absolute;background-size:cover;border-radius:50%;}
+#controls{width:360px;margin:auto;display:flex;justify-content:space-between;margin-top:10px;}
+.controlBtn{width:45%;padding:15px;font-size:20px;background:#444;color:white;border:none;border-radius:5px;}
+#gameOver{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;flex-direction:column;font-size:30px;cursor:pointer;}
+.carOption{display:flex;align-items:center;margin:5px;}
+.carOption img{width:60px;height:100px;margin-right:10px;border:2px solid white;}
+</style>
+</head>
+<body>
+
+<!-- PANTALLA INICIO -->
+<div id="startScreen" class="screen">
+<h1>🚗 Juego de Carros</h1>
+<button onclick="startGame()">Jugar</button>
+<button onclick="openShop()">Tienda</button>
+</div>
+
+<!-- TIENDA -->
+<div id="shopScreen" class="screen" style="display:none">
+<h2>Tienda de Vehículos</h2>
+<p>Monedas: <span id="shopCoins">0</span></p>
+<div class="carOption"><img src="carro.png.png"><button onclick="buyCar(0)">Carro actual (Gratis)</button></div>
+<div class="carOption"><img src="ram.png"><button onclick="buyCar(1)">Dodge Ram (100)</button></div>
+<div class="carOption"><img src="toyota.png"><button onclick="buyCar(2)">Toyota LC300 (170)</button></div>
+<div class="carOption"><img src="mercedes2.png"><button onclick="buyCar(3)">Mercedes Benz (200)</button></div>
+<div class="carOption"><img src="bugatti.png"><button onclick="buyCar(4)">Bugatti Chiron (750)</button></div>
+<button onclick="backMenu()">Volver</button>
+</div>
+
+<!-- JUEGO -->
+<div id="game">
+<div id="info">
+<span id="score">Puntos: 0</span>
+<span id="coins">Monedas: 0</span>
+<span id="speedDisplay">Velocidad: 20 km/h</span>
+</div>
+
+<div class="laneLine" id="line1" style="top:-80px"></div>
+<div class="laneLine" id="line2" style="top:-80px"></div>
+
+<img id="player" src="player1.png">
+
+<div id="gameOver">
+<p>Has perdido. Intenta De Nuevo</p>
+<p>Click para volver al menú</p>
+</div>
+</div>
+
+<!-- BOTONES MOVILES -->
+<div id="controls">
+<button class="controlBtn" onclick="moveLeft()">⬅️</button>
+<button class="controlBtn" onclick="moveRight()">➡️</button>
+</div>
+
+<script>
+/* VARIABLES */
+let lanes=[30,150,270], lane=0;
+let playerCars=["carro.png.png","dodge.png","toyota1.png","mercedes.png","carrojugador.png.png"];
+let enemyCars=["camion.png","carrito.png.png","policia.png"];
+let player=document.getElementById("player");
+let game=document.getElementById("game");
+let scoreText=document.getElementById("score");
+let coinsText=document.getElementById("coins");
+let speedText=document.getElementById("speedDisplay");
+let gameOver=document.getElementById("gameOver");
+let lines=document.querySelectorAll(".laneLine");
+let playing=false;
+let score=0, coins=parseInt(localStorage.getItem("coins")||0), highscore=parseInt(localStorage.getItem("highscore")||0);
+let selectedCar=parseInt(localStorage.getItem("car")||0);
+player.src=playerCars[selectedCar];
+coinsText.innerText="Monedas: "+coins;
+let baseSpeed=2, speed=baseSpeed, currentKm=20;
+speedText.innerText="Velocidad: "+currentKm+" km/h";
+let enemyInterval=1500;
+
+/* FUNCIONES MENU */
+function startGame(){ 
+    document.getElementById("startScreen").style.display="none"; 
+    game.style.display="block"; 
+    playing=true; 
+    score=0; speed=baseSpeed; currentKm=20; enemyInterval=1500; 
+    scoreText.innerText="Puntos: 0"; 
+    speedText.innerText="Velocidad: "+currentKm+" km/h"; 
+    player.style.left=lanes[lane]+"px"; 
+}
+function openShop(){ document.getElementById("startScreen").style.display="none"; document.getElementById("shopScreen").style.display="flex"; document.getElementById("shopCoins").innerText=coins; }
+function backMenu(){ document.getElementById("shopScreen").style.display="none"; document.getElementById("startScreen").style.display="flex"; }
+function buyCar(id){ 
+    let price=[0,100,170,200,750]; 
+    if(coins>=price[id]){ coins-=price[id]; localStorage.setItem("coins",coins); localStorage.setItem("car",id); selectedCar=id; player.src=playerCars[selectedCar]; alert("Vehículo comprado!"); } 
+    else{ alert("No tienes suficientes monedas"); } 
+    document.getElementById("shopCoins").innerText=coins; 
+}
+
+/* CONTROLES */
+document.addEventListener("keydown",function(e){ if(!playing)return; if(e.key==="ArrowLeft") moveLeft(); if(e.key==="ArrowRight") moveRight(); });
+function moveLeft(){ if(lane>0){ lane--; player.style.left=lanes[lane]+"px"; } }
+function moveRight(){ if(lane<2){ lane++; player.style.left=lanes[lane]+"px"; } }
+
+/* LINEAS CARRETERA */
+setInterval(function(){ 
+    if(!playing) return; 
+    lines.forEach(line=>{
+        let top=parseInt(line.style.top); 
+        top+=speed*5; 
+        if(top>600) top=-80; 
+        line.style.top=top+"px"; 
+    }); 
+},30);
+
+/* ENEMIGOS CORREGIDOS */
+function createEnemiesBatch(){ 
+    if(!playing) return;
+
+    // Máximo 2 enemigos al mismo tiempo para dejar al menos 1 carril libre
+    let maxEnemies = 2;
+    let numEnemies = score >= 50 ? 1 + Math.floor(Math.random() * maxEnemies) : 1;
+    let usedLanes = [];
+
+    for(let i=0; i<numEnemies; i++){
+        let enemy=document.createElement("img");
+        enemy.classList.add("enemy");
+        enemy.src=enemyCars[Math.floor(Math.random() * 3)];
+
+        // Elegir carril libre
+        let laneIndex;
+        do { laneIndex = Math.floor(Math.random() * 3); } while(usedLanes.includes(laneIndex));
+        usedLanes.push(laneIndex);
+
+        enemy.style.left=lanes[laneIndex]+"px";
+        game.appendChild(enemy);
+
+        let pos=-120;
+        let move=setInterval(function(){
+            if(!playing){ clearInterval(move); return; }
+            pos+=speed*5; 
+            enemy.style.top=pos+"px"; 
+            checkCollision(enemy);
+
+            if(pos>650){
+                enemy.remove(); clearInterval(move); score+=5; scoreText.innerText="Puntos: "+score; 
+                if(score>highscore){ highscore=score; localStorage.setItem("highscore",score); }
+                if(score%25===0){ speed+=0.5; currentKm+=10; speedText.innerText="Velocidad: "+currentKm+" km/h"; enemyInterval=Math.max(400, enemyInterval-100); updateEnemyTimer(); }
+            }
+        },30);
+    }
+}
+let enemyTimer=setInterval(createEnemiesBatch, enemyInterval);
+function updateEnemyTimer(){ clearInterval(enemyTimer); enemyTimer=setInterval(createEnemiesBatch, enemyInterval); }
+
+/* MONEDAS */
+function createCoin(){ 
+    if(!playing) return;
+    let coin=document.createElement("img"); coin.classList.add("coin"); coin.src="moneda.png";
+    let randomLane=Math.floor(Math.random()*3); coin.style.left=lanes[randomLane]+15+"px"; 
+    game.appendChild(coin);
+    let pos=-30;
+    let move=setInterval(function(){ 
+        pos+=speed*5; coin.style.top=pos+"px"; 
+        let playerRect=player.getBoundingClientRect(); let coinRect=coin.getBoundingClientRect();
+        if(playerRect.left<coinRect.right && playerRect.right>coinRect.left && playerRect.top<coinRect.bottom && playerRect.bottom>coinRect.top){ 
+            coins++; coinsText.innerText="Monedas: "+coins; localStorage.setItem("coins",coins); coin.remove(); clearInterval(move);
+        }
+        if(pos>650){ coin.remove(); clearInterval(move); }
+    },30);
+}
+setInterval(createCoin,2000);
+
+/* COLISION */
+function checkCollision(enemy){ 
+    let playerRect=player.getBoundingClientRect(); 
+    let enemyRect=enemy.getBoundingClientRect();
+    if(playerRect.left<enemyRect.right && playerRect.right>enemyRect.left && playerRect.top<enemyRect.bottom && playerRect.bottom>enemyRect.top){
+        playing=false; gameOver.style.display="flex"; 
+    }
+}
+gameOver.onclick=function(){ location.reload(); }
+</script>
+<footer>
+<p>&copy; 2026. Todos los derechos reservados. David Galicia</p>
+</footer>
+</body>
+</html>
